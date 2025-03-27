@@ -1,102 +1,139 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../utils/supabaseClient";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import QRCode from "qrcode.react";
+import { supabase } from "../utils/supabaseClient";
+import { sendEmail } from "../utils/sendEmail";
 
-export default function Payment() {
+export default function PaymentPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [transactionId, setTransactionId] = useState("");
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const eventFee = 100; // Fixed event fee
 
   useEffect(() => {
-    async function getUser() {
+    const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        checkPaymentStatus(user.id);
       } else {
         router.push("/login");
       }
-    }
-    getUser();
+    };
+
+    fetchUser();
   }, []);
 
-  async function checkPaymentStatus(userId) {
-    const { data, error } = await supabase
-      .from("registrations")
-      .select("payment_status")
-      .eq("user_id", userId)
-      .single();
-
-    if (data && data.payment_status === "success") {
-      setPaymentVerified(true);
-    }
-  }
-
-  async function submitPayment() {
+  const verifyPayment = async () => {
     if (!transactionId) {
-      alert("Please enter your Transaction ID!");
+      alert("Please enter a transaction ID.");
       return;
     }
 
     setLoading(true);
 
-    // Store the transaction ID in Supabase (manual verification required)
-    const { error } = await supabase
-      .from("registrations")
-      .update({ transaction_id: transactionId, payment_status: "pending" })
-      .eq("user_id", user.id);
+    // Check the transaction ID in the database
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("transaction_id", transactionId)
+      .eq("amount", eventFee)
+      .single();
+
+    if (data) {
+      setPaymentVerified(true);
+      alert("Payment verified successfully! ✅");
+    } else {
+      alert("Invalid transaction ID. Please try again.");
+    }
 
     setLoading(false);
+  };
 
-    if (!error) {
-      alert("Payment submitted for verification! It may take 10-15 minutes.");
-    }
-  }
-
-  async function submitFinalRegistration() {
+  const submitFinalRegistration = async () => {
     if (!paymentVerified) {
-      alert("Complete the payment before submitting.");
+      alert("Please complete the payment before submitting.");
       return;
     }
 
-    // Mark registration as complete
     await supabase
       .from("registrations")
       .update({ registration_complete: true })
       .eq("user_id", user.id);
 
+    // Send confirmation email
+    await sendEmail(
+      user.email,
+      "Event Registration Successful 🎉",
+      `Hello ${user.email},\n\nYour payment has been received, and you are successfully registered for the event!\n\nEvent Details:\n- Event Name: XYZ Event\n- Date: 25th March 2025\n- Payment: ₹${eventFee} (Completed)\n\nThank you for registering!\n\nBest Regards,\nEvent Team`
+    );
+
     alert("Registration Successful! 🎉 Check your email.");
     router.push("/dashboard");
-  }
+  };
 
   return (
     <div className="container">
-      <h1>Complete Payment</h1>
+      <h1>Complete Your Payment</h1>
 
-      <p>Scan the QR code below to pay ₹100</p>
-      <QRCode value="upi://pay?pa=your@upiid&pn=EventRegistration&mc=1234&tid=random123&tr=100" size={200} />
+      <p>Scan the QR Code below and pay ₹{eventFee}.</p>
+      <img src="/qr-code.png" alt="Payment QR Code" className="qr-code" />
 
-      <div>
+      <div className="payment-input">
+        <label>Enter Transaction ID:</label>
         <input
           type="text"
-          placeholder="Enter Transaction ID"
           value={transactionId}
           onChange={(e) => setTransactionId(e.target.value)}
+          placeholder="Enter UPI Transaction ID"
         />
-        <button onClick={submitPayment} disabled={loading}>
-          {loading ? "Processing..." : "Submit Payment"}
+        <button onClick={verifyPayment} disabled={loading}>
+          {loading ? "Verifying..." : "Verify Payment"}
         </button>
       </div>
 
       {paymentVerified && (
-        <div>
-          <p>✅ Payment Verified!</p>
-          <button onClick={submitFinalRegistration}>Submit Registration</button>
+        <div className="success-message">
+          ✅ Payment verified! You can now submit your registration.
         </div>
       )}
+
+      <button onClick={submitFinalRegistration} disabled={!paymentVerified}>
+        Submit Registration
+      </button>
+
+      <style jsx>{`
+        .container {
+          text-align: center;
+          padding: 20px;
+        }
+        .qr-code {
+          width: 200px;
+          margin: 20px 0;
+        }
+        .payment-input {
+          margin-top: 20px;
+        }
+        .payment-input input {
+          padding: 10px;
+          margin-right: 10px;
+        }
+        .success-message {
+          color: green;
+          margin-top: 10px;
+        }
+        button {
+          padding: 10px 15px;
+          background: blue;
+          color: white;
+          border: none;
+          cursor: pointer;
+        }
+        button:disabled {
+          background: grey;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 }
