@@ -1,28 +1,45 @@
-import { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useState } from "react";
+import { useRouter } from "next/router";
+import { supabase } from "../utils/supabaseClient";
 
 export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const router = useRouter();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const data = await res.json();
-        if (res.ok) router.push('/dashboard');
-        else alert(data.error);
-    };
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(""); 
 
-    return (
-        <form onSubmit={handleLogin}>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Password" />
-            <button type="submit">Login</button>
-        </form>
-    );
+    const { user, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      router.push("/register"); // Redirect to the event registration page
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+
+    if (error) {
+      setError(error.message);
+    }
+  };
+
+  return (
+    <div className="container">
+      <h1>Login</h1>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleLogin}>
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <button type="submit" className="btn">Login</button>
+      </form>
+      <button onClick={handleGoogleLogin} className="google-btn">Login with Google</button>
+      <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+    </div>
+  );
 }
