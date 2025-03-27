@@ -34,3 +34,22 @@ input {
 .error {
   color: red;
 }
+.container {
+  max-width: 400px;
+  margin: auto;
+  text-align: center;
+}
+
+input, button {
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+button {
+  cursor: pointer;
+  background: #0070f3;
+  color: white;
+  border: none;
+}
