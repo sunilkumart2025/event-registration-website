@@ -1,26 +1,25 @@
-import { useState } from 'react';
-import supabase from '../lib/supabaseClient';
+import { useState } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import ProgressBar from "../components/ProgressBar";
 
 export default function Register() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+  const router = useRouter();
+  const [progress, setProgress] = useState(0); // Track form completion
 
-    async function handleRegister() {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-        });
+  const handleRegisterClick = () => {
+    router.push("/login"); // Redirect to login/signup
+  };
 
-        if (error) alert(error.message);
-        else alert('Check your email for confirmation!');
-    }
-
-    return (
-        <div>
-            <h2>Register</h2>
-            <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-            <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
-            <button onClick={handleRegister}>Sign Up</button>
-        </div>
-    );
+  return (
+    <div className="container">
+      <h1>Event Registration</h1>
+      <ProgressBar progress={progress} />
+      <p>Register now to book your spot!</p>
+      <button onClick={handleRegisterClick} className="register-btn">
+        Register for Event
+      </button>
+      <p>Already registered? <Link href="/login">Login here</Link></p>
+    </div>
+  );
 }
