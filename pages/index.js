@@ -1,12 +1,12 @@
-import Link from 'next/link';
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
 export default function Home() {
-    return (
-        <div>
-            <h1>Welcome to Event Registration</h1>
-            <Link href="/register">
-                <button>Register for Event</button>
-            </Link>
-        </div>
-    );
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push("/register"); // Redirects to event registration page
+  }, []);
+
+  return null; // No UI needed since it redirects immediately
 }
